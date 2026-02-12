@@ -1,7 +1,9 @@
 #include "Level.h"
+#include <iomanip>
+#include <fstream>
 
 Level::Level(sf::RenderWindow& hwnd, Input& in) :
-    BaseLevel(hwnd, in), m_timerText(m_font), m_winText(m_font)
+    BaseLevel(hwnd, in), m_timerText(m_font), m_winText(m_font), m_scoreboard(m_font)
 {
     m_isGameOver = false;
 
@@ -10,7 +12,7 @@ Level::Level(sf::RenderWindow& hwnd, Input& in) :
 
     // Initialise the Player (Rabbit)
     m_playerRabbit = new Rabbit();
-    m_playerRabbit->setPosition({ 40.f, 40.f });  // hardcoded. FOR NOW!
+    //m_playerRabbit->setPosition({ 40.f, 40.f });  // hardcoded. FOR NOW!
     if (!m_rabbitTexture.loadFromFile("gfx/rabbit_sheet.png")) std::cerr << "no rabbit texture";
     if (!m_sheepTexture.loadFromFile("gfx/sheep_sheet.png")) std::cerr << "no sheep texture";
     m_playerRabbit->setSize({ 32,32 });
@@ -18,7 +20,7 @@ Level::Level(sf::RenderWindow& hwnd, Input& in) :
     m_playerRabbit->setTexture(&m_rabbitTexture);
     m_playerRabbit->setWorldSize(levelSize.x, levelSize.y);
 
-
+    /* OLD
     // Initialise Sheep (initial position AND pointer to the rabbit
     for (int i = 0; i < 1; i++)
     {
@@ -27,6 +29,24 @@ Level::Level(sf::RenderWindow& hwnd, Input& in) :
         m_sheepList[i]->setSize({ 32,32 });
         m_sheepList[i]->setWorldSize(levelSize.x, levelSize.y);
     }
+      // setup walls
+    for (int i = 0; i < 2; i++)
+    {
+        GameObject wall;
+        wall.setPosition({ 100.f + i * 600, 100.f});
+        wall.setSize({ 50,300 });
+        wall.setFillColor(sf::Color::Black);
+        wall.setCollisionBox({ { 0,0 }, { 50,300 } });
+        m_walls.push_back(wall);
+    }
+
+      // setup goal
+    m_goal.setSize({ 50, 50 });
+    m_goal.setFillColor(sf::Color::Blue);
+    m_goal.setPosition({ 250, 250 });
+    m_goal.setCollisionBox({ { 0,0 }, { 50,50 } });
+    */
+    loadLevel("data/level1.txt", levelSize);
 
     // Initialise Timer
     m_gameTimer.restart();
@@ -47,23 +67,12 @@ Level::Level(sf::RenderWindow& hwnd, Input& in) :
     m_winText.setFillColor(sf::Color::Blue);
     m_winText.setPosition({ -1000.f, 100.f });  // outside of view
 
+   
 
-    // setup goal
-    m_goal.setSize({ 50, 50 });
-    m_goal.setFillColor(sf::Color::Blue);
-    m_goal.setPosition({ 250, 250 });
-    m_goal.setCollisionBox({ { 0,0 }, { 50,50 } });
 
-    // setup walls
-    for (int i = 0; i < 2; i++)
-    {
-        GameObject wall;
-        wall.setPosition({ 100.f + i * 600, 100.f});
-        wall.setSize({ 50,300 });
-        wall.setFillColor(sf::Color::Black);
-        wall.setCollisionBox({ { 0,0 }, { 50,300 } });
-        m_walls.push_back(wall);
-    }
+  
+
+  
 
     m_bgFarm.setFillColor(sf::Color::Green);
     m_bgFarm.setSize(levelSize);
@@ -81,6 +90,57 @@ Level::~Level()
 		delete s;
 	}
 	m_sheepList.clear();
+}
+
+void Level::loadLevel(std::string filename, sf::Vector2f worldSize) {
+
+    std::ifstream inputFile(filename);
+    if (!inputFile.is_open()) {
+        std::cerr << "Can't read from the file :(";
+        return;
+    }
+
+    std::string readInType;
+    float xPos;
+    float yPos;
+    float width;
+    float length;
+    int i = 0;
+
+    while (inputFile >> readInType) {
+        if (readInType == "SHEEP") {
+            inputFile >> xPos >> yPos;
+            m_sheepList.push_back(new Sheep(sf::Vector2f{ xPos, yPos }, m_playerRabbit));
+            m_sheepList[i]->setTexture(&m_sheepTexture);
+            m_sheepList[i]->setSize({ 32,32 });
+            m_sheepList[i]->setWorldSize(worldSize.x, worldSize.y); i++;
+        }
+        else if (readInType == "WALL") {
+            inputFile >> xPos >> yPos >> length >> width;
+            GameObject wall;
+            wall.setPosition({ xPos, yPos });
+            wall.setSize({ width, length });
+            wall.setFillColor(sf::Color::Black);
+            wall.setCollisionBox({ { 0,0 }, { width,length } });
+            m_walls.push_back(wall);
+        }
+        else if (readInType == "GOAL") {
+            inputFile >> xPos >> yPos >> length >> width;
+            m_goal.setSize({ width, length });
+            m_goal.setFillColor(sf::Color::Blue);
+            m_goal.setPosition({ xPos, yPos });
+            m_goal.setCollisionBox({ { 0,0 }, { width,length } });
+        }
+        else if (readInType == "RABBIT") {
+            inputFile >> xPos >> yPos;
+
+            m_playerRabbit->setPosition(sf::Vector2f{ xPos, yPos });
+
+        }
+    }
+
+    inputFile.close();
+
 }
 
 void Level::UpdateCamera()
@@ -164,12 +224,29 @@ void Level::manageCollisions()
     }
 }
 
+
+//Write score to file
 void Level::writeHighScore(float timeElapsed) {
 
         std::ofstream file_to_write_to("data/high_Scores.txt", std::ios::app);
         file_to_write_to << std::fixed << std::setprecision(1) << timeElapsed << "\n";
         file_to_write_to.close();
 
+}
+
+//Read file for high score
+void Level::displayScoreboard() {
+    
+    m_scoreboard.setString("Highscores: \n");
+    std::ifstream file_to_read("data/high_Scores.txt");
+    std::string score;
+    while (std::getline(file_to_read, score)) {
+        m_scoreboard.setString(m_scoreboard.getString() + score + "\n");
+    }
+    file_to_read.close();
+    m_scoreboard.setCharacterSize(25);
+    m_scoreboard.setPosition({ 400.f, 150.f });
+    m_scoreboard.setFillColor(sf::Color::Black);
 }
 
 // Update game objects
@@ -192,7 +269,10 @@ void Level::update(float dt)
     UpdateCamera();
     m_isGameOver = CheckWinCondition();
 
-    if (m_isGameOver) writeHighScore(timeElapsed);
+    if (m_isGameOver) {
+        writeHighScore(timeElapsed);
+        displayScoreboard();
+    }
 
 }
 
@@ -210,6 +290,7 @@ void Level::render()
     m_window.draw(*m_playerRabbit);
     m_window.draw(m_timerText);
     m_window.draw(m_winText);
+    m_window.draw(m_scoreboard);
     
 	endDraw();
 }

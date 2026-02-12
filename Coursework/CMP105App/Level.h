@@ -1,7 +1,6 @@
 #pragma once
 
-#include <iomanip>
-#include <fstream>
+
 #include "Framework/BaseLevel.h"
 #include "Framework/GameObject.h"
 #include "Framework/Collision.h"
@@ -18,10 +17,13 @@ public:
 	void render() override;
 
 private:
+
+    void loadLevel(std::string filename, sf::Vector2f worldSize);
     void UpdateCamera();
     bool CheckWinCondition();
     void manageCollisions();
     void writeHighScore(float);
+    void displayScoreboard();
 
     sf::View m_cameraView;
 
@@ -43,5 +45,6 @@ private:
     sf::Font m_font;
     sf::Text m_timerText;
     sf::Text m_winText;
+    sf::Text m_scoreboard;
 	
 };
