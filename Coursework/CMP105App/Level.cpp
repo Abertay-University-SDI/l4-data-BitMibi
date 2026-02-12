@@ -20,7 +20,7 @@ Level::Level(sf::RenderWindow& hwnd, Input& in) :
 
 
     // Initialise Sheep (initial position AND pointer to the rabbit
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < 1; i++)
     {
         m_sheepList.push_back(new Sheep(sf::Vector2f(200.f + 100 * i, 400.f - 100 * i), m_playerRabbit));
         m_sheepList[i]->setTexture(&m_sheepTexture);
@@ -164,10 +164,18 @@ void Level::manageCollisions()
     }
 }
 
+void Level::writeHighScore(float timeElapsed) {
+
+        std::ofstream file_to_write_to("data/high_Scores.txt", std::ios::app);
+        file_to_write_to << std::fixed << std::setprecision(1) << timeElapsed << "\n";
+        file_to_write_to.close();
+
+}
+
 // Update game objects
 void Level::update(float dt)
 {
-    if (m_isGameOver) return;   // if the game is over, don't continue trying to process game logic
+    if (m_isGameOver) return;  // if the game is over, don't continue trying to process game logic
 
     m_playerRabbit->update(dt);
     for (Sheep* s : m_sheepList)
@@ -183,6 +191,8 @@ void Level::update(float dt)
     manageCollisions();
     UpdateCamera();
     m_isGameOver = CheckWinCondition();
+
+    if (m_isGameOver) writeHighScore(timeElapsed);
 
 }
 
